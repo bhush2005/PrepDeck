@@ -26,6 +26,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusModifier
@@ -37,7 +42,9 @@ import com.example.prepdeck.R
 import com.example.prepdeck.domain.model.Session
 import com.example.prepdeck.domain.model.Subject
 import com.example.prepdeck.domain.model.Task
+import com.example.prepdeck.presentation.dashboard.components.AddSubjectDialogue
 import com.example.prepdeck.presentation.dashboard.components.CountCard
+import com.example.prepdeck.presentation.dashboard.components.DeleteDialogue
 import com.example.prepdeck.presentation.dashboard.components.StudySessionsList
 import com.example.prepdeck.presentation.dashboard.components.SubjectCard
 import com.example.prepdeck.presentation.dashboard.components.TasksList
@@ -71,6 +78,35 @@ fun DashboardScreen( ) {
 
     )
 
+    var isAddSubjectDialogOpen by rememberSaveable{ mutableStateOf(false) }
+    var isDeleteSessionDialogOpen by rememberSaveable{ mutableStateOf(false) }
+
+    var subjectName by remember { mutableStateOf("") }
+    var goalHours by remember { mutableStateOf("") }
+    var selectColor by remember { mutableStateOf(Subject.subjectCardColors.random()) }
+
+    AddSubjectDialogue(
+        isOpen = isAddSubjectDialogOpen,
+        subjectName = subjectName,
+        goalHours = goalHours,
+        onSubjectNameChange = {subjectName = it},
+        onGoalHoursChange = {goalHours = it},
+        selectColors = selectColor,
+        onColorChange= {selectColor = it},
+        onDismissRequest= { isAddSubjectDialogOpen = false },
+        onConfirmButtonClick = {
+            isAddSubjectDialogOpen = false
+        }
+    )
+
+    DeleteDialogue(
+        isOpen = isDeleteSessionDialogOpen,
+        title = "Delete Session?",
+        bodyText = "Are you sure, you want to delete this session? your studied hours will be reduced " + "by this session time. This action can not be undone",
+        onDismissRequest = { isDeleteSessionDialogOpen = false },
+        onConfirmButtonClick = { isDeleteSessionDialogOpen = false }
+        )
+
     Scaffold(
         topBar = { DashboardScreenTopBar() }
     ) { paddingValues ->
@@ -92,7 +128,8 @@ fun DashboardScreen( ) {
             item {
                 SubjectCardSection(
                     modifier = Modifier.fillMaxWidth(),
-                    subjectList = subjects
+                    subjectList = subjects,
+                    onAddIconClicked = { isAddSubjectDialogOpen = true }
                 )
             }
 
@@ -124,7 +161,7 @@ fun DashboardScreen( ) {
                 sectionTitle = "RECENT STUDY SESSIONS",
                 emptyListText = "You don't have any recent sessions. \n Start a study session to begin recording your progress",
                 sessions = sessions,
-                onDeleteIconClick = { }
+                onDeleteIconClick = { isDeleteSessionDialogOpen = true }
 
             )
         }
@@ -182,7 +219,8 @@ private fun CountCardSection(
 private fun SubjectCardSection(
     modifier: Modifier,
     subjectList: List<Subject>,
-    emptyListText: String = "You don't have any subjects. \nClick the + button to add new subject"
+    emptyListText: String = "You don't have any subjects. \nClick the + button to add new subject",
+    onAddIconClicked: () -> Unit
 ) {
     Column(
         modifier = modifier
@@ -199,7 +237,7 @@ private fun SubjectCardSection(
             )
 
             IconButton(
-                onClick = { }
+                onClick = onAddIconClicked
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -211,7 +249,7 @@ private fun SubjectCardSection(
             Image(
                 modifier = Modifier
                     .size(120.dp)
-                    .align ( Alignment.CenterHorizontally),
+                    .align(Alignment.CenterHorizontally),
                 painter = painterResource(R.drawable.img_books),
                 contentDescription = emptyListText
             )
