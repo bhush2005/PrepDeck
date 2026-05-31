@@ -51,14 +51,35 @@ import com.example.prepdeck.subjects
 import com.example.prepdeck.ui.theme.Red
 import com.example.prepdeck.util.Priority
 import com.example.prepdeck.util.changeMillisToDateString
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
+
+data class TaskScreenNavArgs(
+    val taskID: Int?,
+    val subjectID: Int?
+)
+
+@Destination(navArgsDelegate = TaskScreenNavArgs::class)
+@Composable
+fun TaskScreenRoute(
+    navigator: DestinationsNavigator
+) {
+    TaskScreen(
+        onBackButtonClick = { navigator.navigateUp() }
+    )
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskScreen() {
+private fun TaskScreen(
+    onBackButtonClick: () -> Unit
+) {
 
     var isDeleteDialogOpen by rememberSaveable { mutableStateOf(false) }
 
@@ -132,7 +153,7 @@ fun TaskScreen() {
                 isTaskExist = true,
                 isComplete = false,
                 checkBoxBorderColor = Red,
-                onBackButtonClick = {},
+                onBackButtonClick = onBackButtonClick,
                 onDeleteButtonClick = {isDeleteDialogOpen = true},
                 onCheckBoxClick = {}
             )

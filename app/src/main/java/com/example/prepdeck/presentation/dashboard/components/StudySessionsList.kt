@@ -118,7 +118,7 @@ private fun StudySessionCard(
                     style = MaterialTheme.typography.bodySmall
                 )
 
-                IconButton(onClick = { onDeleteIconClick }) {
+                IconButton(onClick = { onDeleteIconClick() }) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete session"

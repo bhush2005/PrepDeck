@@ -90,7 +90,7 @@ private fun TaskCard(
 
     ElevatedCard(
         modifier = Modifier
-            .clickable{ onClick }
+            .clickable { onClick() }
             .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
             Row(

@@ -41,12 +41,28 @@ import com.example.prepdeck.presentation.dashboard.components.StudySessionsList
 import com.example.prepdeck.presentation.dashboard.components.SubjectListBottomSheet
 import com.example.prepdeck.sessions
 import com.example.prepdeck.subjects
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import java.nio.file.WatchEvent
 
+
+@Destination
+@Composable
+fun SessionScreenRoute(
+    navigator: DestinationsNavigator
+) {
+    SessionScreen(
+        onBackButtonClick = { navigator.navigateUp() }
+    )
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SessionScreen() {
+private fun SessionScreen(
+    onBackButtonClick: () -> Unit
+) {
 
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
@@ -78,7 +94,7 @@ fun SessionScreen() {
 
 
     Scaffold (
-        topBar = { SessionScreenTopBar(onBackButtonClick = { })}
+        topBar = { SessionScreenTopBar(onBackButtonClick = onBackButtonClick)}
     ) {paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -221,7 +237,7 @@ private fun ButtonSection(
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         Button(
-            onClick = { cancelButtonClick }
+            onClick = { cancelButtonClick() }
         ) {
             Text(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
@@ -229,7 +245,7 @@ private fun ButtonSection(
             )
         }
         Button(
-            onClick = { startButtonClick }
+            onClick = { startButtonClick() }
         ) {
             Text(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
@@ -237,7 +253,7 @@ private fun ButtonSection(
             )
         }
         Button(
-            onClick = { finishButtonClick }
+            onClick = { finishButtonClick() }
         ) {
             Text(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),

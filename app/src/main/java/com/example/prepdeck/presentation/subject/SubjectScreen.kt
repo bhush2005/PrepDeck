@@ -1,5 +1,6 @@
 package com.example.prepdeck.presentation.subject
 
+import android.view.TouchDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -47,12 +48,44 @@ import com.example.prepdeck.presentation.dashboard.components.CountCard
 import com.example.prepdeck.presentation.dashboard.components.DeleteDialogue
 import com.example.prepdeck.presentation.dashboard.components.StudySessionsList
 import com.example.prepdeck.presentation.dashboard.components.TasksList
+import com.example.prepdeck.presentation.destinations.TaskScreenRouteDestination
+import com.example.prepdeck.presentation.destinations.TaskScreenRouteDestination.invoke
+import com.example.prepdeck.presentation.task.TaskScreenNavArgs
 import com.example.prepdeck.sessions
 import com.example.prepdeck.tasks
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+
+
+data class SubjectScreenNavArgs(
+    val subjectID: Int
+)
+
+@Destination(navArgsDelegate = SubjectScreenNavArgs::class)
+@Composable
+fun SubjectScreenRoute(
+    navigator: DestinationsNavigator
+) {
+    SubjectScreen(
+        onBackButtonClick = {navigator.navigateUp()},
+        onAddTaskButtonClick = {
+            val navArgs = TaskScreenNavArgs(taskID = null, subjectID = -1)
+            navigator.navigate(TaskScreenRouteDestination(navArgs = navArgs))
+        },
+        onTaskCardClick = { taskID ->
+            val navArgs = TaskScreenNavArgs(taskID = taskID, subjectID = null)
+            navigator.navigate(TaskScreenRouteDestination(navArgs = navArgs))
+        }
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SubjectScreen() {
+private fun SubjectScreen(
+    onBackButtonClick:() -> Unit,
+    onAddTaskButtonClick: () -> Unit,
+    onTaskCardClick: (Int?) -> Unit
+) {
 
     val scrollBehaviour = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val listState = rememberLazyListState()
@@ -102,7 +135,7 @@ fun SubjectScreen() {
         topBar = {
             SubjectScreenTopBar(
                 title = "English",
-                onBackButtonClick = { },
+                onBackButtonClick = onBackButtonClick,
                 onEditButtonClick = { isAddSubjectDialogOpen = true },
                 onDeleteButtonClick = { isDeleteSubjectDialogOpen = true },
                 scrollBehavior = scrollBehaviour
@@ -111,7 +144,7 @@ fun SubjectScreen() {
 
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { },
+                onClick = onAddTaskButtonClick,
                 icon = { Icon(imageVector = Icons.Default.Add, contentDescription = "add") },
                 text = { Text(text = "Add task")},
                 expanded = isFABExpanded
@@ -141,7 +174,7 @@ fun SubjectScreen() {
                         "\nClick the + button to add new task.",
                 tasks = tasks,
                 onCheckBoxClick = {},
-                onTaskCardClick = {}
+                onTaskCardClick = onTaskCardClick
             )
 
             item {
@@ -153,7 +186,7 @@ fun SubjectScreen() {
                 emptyListText = "You don't have any upcoming tasks. \nClick the check box on completion of task",
                 tasks = tasks,
                 onCheckBoxClick = {},
-                onTaskCardClick = {}
+                onTaskCardClick = onTaskCardClick
             )
 
             item {
