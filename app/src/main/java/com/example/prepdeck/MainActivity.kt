@@ -4,14 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Scaffold
-import androidx.compose.ui.Modifier
 import com.example.prepdeck.domain.model.Session
 import com.example.prepdeck.domain.model.Subject
 import com.example.prepdeck.domain.model.Task
-import com.example.prepdeck.presentation.dashboard.DashboardScreen
-import com.example.prepdeck.presentation.subject.SubjectScreen
+import com.example.prepdeck.presentation.session.SessionScreen
+import com.example.prepdeck.presentation.task.TaskScreen
 import com.example.prepdeck.ui.theme.PrepDeckTheme
 
 class MainActivity : ComponentActivity() {
@@ -20,7 +17,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PrepDeckTheme {
-                SubjectScreen()
+                SessionScreen()
                 }
             }
         }
