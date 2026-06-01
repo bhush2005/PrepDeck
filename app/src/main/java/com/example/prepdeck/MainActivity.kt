@@ -10,7 +10,9 @@ import com.example.prepdeck.domain.model.Task
 import com.example.prepdeck.ui.theme.PrepDeckTheme
 import com.example.prepdeck.presentation.NavGraphs
 import com.ramcosta.composedestinations.DestinationsNavHost
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

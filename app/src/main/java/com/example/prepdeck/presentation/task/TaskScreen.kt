@@ -43,10 +43,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.prepdeck.presentation.dashboard.components.DeleteDialogue
-import com.example.prepdeck.presentation.dashboard.components.SubjectListBottomSheet
-import com.example.prepdeck.presentation.dashboard.components.TaskCheckBox
-import com.example.prepdeck.presentation.dashboard.components.TaskDatePicker
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.prepdeck.presentation.components.DeleteDialogue
+import com.example.prepdeck.presentation.components.SubjectListBottomSheet
+import com.example.prepdeck.presentation.components.TaskCheckBox
+import com.example.prepdeck.presentation.components.TaskDatePicker
 import com.example.prepdeck.subjects
 import com.example.prepdeck.ui.theme.Red
 import com.example.prepdeck.util.Priority
@@ -69,6 +70,7 @@ data class TaskScreenNavArgs(
 fun TaskScreenRoute(
     navigator: DestinationsNavigator
 ) {
+    val viewModel : TaskViewModel = hiltViewModel()
     TaskScreen(
         onBackButtonClick = { navigator.navigateUp() }
     )

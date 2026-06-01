@@ -33,21 +33,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.prepdeck.R
-import com.example.prepdeck.domain.model.Session
 import com.example.prepdeck.domain.model.Subject
-import com.example.prepdeck.domain.model.Task
-import com.example.prepdeck.presentation.dashboard.components.AddSubjectDialogue
-import com.example.prepdeck.presentation.dashboard.components.CountCard
-import com.example.prepdeck.presentation.dashboard.components.DeleteDialogue
-import com.example.prepdeck.presentation.dashboard.components.StudySessionsList
-import com.example.prepdeck.presentation.dashboard.components.SubjectCard
-import com.example.prepdeck.presentation.dashboard.components.TasksList
+import com.example.prepdeck.presentation.components.AddSubjectDialogue
+import com.example.prepdeck.presentation.components.CountCard
+import com.example.prepdeck.presentation.components.DeleteDialogue
+import com.example.prepdeck.presentation.components.StudySessionsList
+import com.example.prepdeck.presentation.components.SubjectCard
+import com.example.prepdeck.presentation.components.TasksList
 import com.example.prepdeck.presentation.destinations.SessionScreenRouteDestination
 import com.example.prepdeck.presentation.destinations.SubjectScreenRouteDestination
 import com.example.prepdeck.presentation.destinations.TaskScreenRouteDestination
@@ -64,6 +62,9 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 fun DashboardScreenRoute(
     navigator: DestinationsNavigator
 ) {
+
+    val viewModel : DashboardViewModel = hiltViewModel()
+
     DashboardScreen(
         onSubjectCardClick = { subjectID ->
             subjectID?.let {

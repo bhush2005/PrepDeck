@@ -1,4 +1,4 @@
-package com.example.prepdeck.presentation.dashboard.components
+package com.example.prepdeck.presentation.components
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text

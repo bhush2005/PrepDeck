@@ -1,6 +1,5 @@
 package com.example.prepdeck.presentation.subject
 
-import android.view.TouchDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -42,14 +41,14 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.prepdeck.domain.model.Subject
-import com.example.prepdeck.presentation.dashboard.components.AddSubjectDialogue
-import com.example.prepdeck.presentation.dashboard.components.CountCard
-import com.example.prepdeck.presentation.dashboard.components.DeleteDialogue
-import com.example.prepdeck.presentation.dashboard.components.StudySessionsList
-import com.example.prepdeck.presentation.dashboard.components.TasksList
+import com.example.prepdeck.presentation.components.AddSubjectDialogue
+import com.example.prepdeck.presentation.components.CountCard
+import com.example.prepdeck.presentation.components.DeleteDialogue
+import com.example.prepdeck.presentation.components.StudySessionsList
+import com.example.prepdeck.presentation.components.TasksList
 import com.example.prepdeck.presentation.destinations.TaskScreenRouteDestination
-import com.example.prepdeck.presentation.destinations.TaskScreenRouteDestination.invoke
 import com.example.prepdeck.presentation.task.TaskScreenNavArgs
 import com.example.prepdeck.sessions
 import com.example.prepdeck.tasks
@@ -66,6 +65,7 @@ data class SubjectScreenNavArgs(
 fun SubjectScreenRoute(
     navigator: DestinationsNavigator
 ) {
+    val viewModel : SubjectViewModel = hiltViewModel()
     SubjectScreen(
         onBackButtonClick = {navigator.navigateUp()},
         onAddTaskButtonClick = {

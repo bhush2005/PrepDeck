@@ -1,6 +1,7 @@
-package com.example.prepdeck.presentation.dashboard.components
+package com.example.prepdeck.presentation.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,11 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,16 +21,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.prepdeck.domain.model.Session
+import com.example.prepdeck.R
+import com.example.prepdeck.domain.model.Task
+import com.example.prepdeck.util.Priority
 
 
-fun LazyListScope.StudySessionsList(
+fun LazyListScope.TasksList(
     sectionTitle: String,
     emptyListText: String,
-    sessions: List<Session>,
-    onDeleteIconClick: (Session)-> Unit
+    tasks: List<Task>,
+    onTaskCardClick: (Int?) -> Unit,
+    onCheckBoxClick: (Task) -> Unit
 ) {
     item {
         Text(
@@ -43,7 +44,7 @@ fun LazyListScope.StudySessionsList(
         )
     }
 
-    if (sessions.isEmpty()) {
+    if (tasks.isEmpty()) {
         item {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -52,7 +53,7 @@ fun LazyListScope.StudySessionsList(
                 Image(
                     modifier = Modifier
                         .size(120.dp),
-                    painter = painterResource(com.example.prepdeck.R.drawable.img_lamp),
+                    painter = painterResource(R.drawable.img_tasks),
                     contentDescription = emptyListText
                 )
 
@@ -67,63 +68,62 @@ fun LazyListScope.StudySessionsList(
         }
     }
 
-    items(sessions) { session->
-        StudySessionCard(
+    items(tasks) { task->
+        TaskCard(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-            session = session,
-            onDeleteIconClick = { onDeleteIconClick(session) }
+            task= task,
+            onCheckBoxClick = { onCheckBoxClick(task) },
+            onClick = { onTaskCardClick(task.taskId) }
         )
+
     }
 }
 
 @Composable
-private fun StudySessionCard(
+private fun TaskCard(
     modifier: Modifier = Modifier,
-    session: Session,
-    onDeleteIconClick: ()-> Unit
-) {
+    task: Task,
+    onCheckBoxClick: ()->Unit,
+    onClick: ()-> Unit
+    ) {
 
-    Card(
+    ElevatedCard(
         modifier = Modifier
-            .padding(8.dp)
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.padding(start = 12.dp)
-                ) {
-                    Spacer(modifier = Modifier.width(10.dp))
 
+                TaskCheckBox(
+                isComplete = task.isComplete,
+                borderColor = Priority.fromInt(task.priority).color,
+                onCheckBoxClick = onCheckBoxClick
+            )
+                Spacer(modifier= Modifier.width(10.dp))
+                Column {
                     Text(
-                        text = session.relatedToSubject,
+                        text = task.title,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.titleMedium,
+                        textDecoration = if (task.isComplete){
+                            TextDecoration.LineThrough
+                        } else TextDecoration.None
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "${session.date}",
+                        text = "${task.dueDate}",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+        }
 
-                Spacer(modifier = modifier.weight(1f))
-                Text(
-                    text = "${session.duration} hr",
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                IconButton(onClick = { onDeleteIconClick() }) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete session"
-                    )
-                }
-            }
     }
 }

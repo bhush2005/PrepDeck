@@ -1,4 +1,4 @@
-package com.example.prepdeck.presentation.dashboard.components
+package com.example.prepdeck.presentation.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.border

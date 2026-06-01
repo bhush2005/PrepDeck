@@ -1,4 +1,4 @@
-package com.example.prepdeck.presentation.dashboard.components
+package com.example.prepdeck.presentation.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box

@@ -1,6 +1,5 @@
 package com.example.prepdeck.presentation.session
 
-import android.R
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,18 +32,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.prepdeck.presentation.dashboard.components.DeleteDialogue
-import com.example.prepdeck.presentation.dashboard.components.StudySessionsList
-import com.example.prepdeck.presentation.dashboard.components.SubjectListBottomSheet
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.prepdeck.presentation.components.DeleteDialogue
+import com.example.prepdeck.presentation.components.StudySessionsList
+import com.example.prepdeck.presentation.components.SubjectListBottomSheet
 import com.example.prepdeck.sessions
 import com.example.prepdeck.subjects
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
-import java.nio.file.WatchEvent
 
 
 @Destination
@@ -52,6 +50,8 @@ import java.nio.file.WatchEvent
 fun SessionScreenRoute(
     navigator: DestinationsNavigator
 ) {
+
+    val viewModel : SessionViewModel = hiltViewModel()
     SessionScreen(
         onBackButtonClick = { navigator.navigateUp() }
     )
