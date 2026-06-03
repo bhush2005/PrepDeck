@@ -13,9 +13,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,11 +36,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.prepdeck.presentation.components.DeleteDialogue
 import com.example.prepdeck.presentation.components.StudySessionsList
 import com.example.prepdeck.presentation.components.SubjectListBottomSheet
-import com.example.prepdeck.sessions
-import com.example.prepdeck.subjects
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
@@ -50,9 +50,12 @@ import kotlinx.coroutines.launch
 fun SessionScreenRoute(
     navigator: DestinationsNavigator
 ) {
+    val viewModel: SessionViewModel = hiltViewModel()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
-    val viewModel : SessionViewModel = hiltViewModel()
     SessionScreen(
+        state = state,
+        onEvent = viewModel::onEvent,
         onBackButtonClick = { navigator.navigateUp() }
     )
 }
@@ -61,41 +64,45 @@ fun SessionScreenRoute(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SessionScreen(
+    state: SessionState,
+    onEvent: (SessionEvent) -> Unit,
     onBackButtonClick: () -> Unit
 ) {
 
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
     var isBottomSheetOpen by rememberSaveable { mutableStateOf(false) }
-
     var isDeleteDialogOpen by rememberSaveable { mutableStateOf(false) }
 
     SubjectListBottomSheet(
         sheetState = sheetState,
         isOpen = isBottomSheetOpen,
-        subjects = subjects,
+        subjects = state.subjects,
         bottomSheetTitle = "Related to subject",
         onDismissRequest = { isBottomSheetOpen = false },
-        onSubjectClicked = {
-            scope.launch { sheetState.hide()}. invokeOnCompletion {
+        onSubjectClicked = { subject ->
+            onEvent(SessionEvent.OnRelatedSubjectChange(subject))
+            scope.launch { sheetState.hide() }.invokeOnCompletion {
                 if (!sheetState.isVisible) isBottomSheetOpen = false
             }
         }
     )
 
     DeleteDialogue(
-        isOpen =isDeleteDialogOpen,
+        isOpen = isDeleteDialogOpen,
         title = "Delete Session?",
-        bodyText = "Are you sure, you want to delete this Session? " +
-                "This action can not be undone",
+        bodyText = "Are you sure, you want to delete this session? Your studied hours will be reduced " +
+                "by this session time. This action can not be undone",
         onDismissRequest = { isDeleteDialogOpen = false },
-        onConfirmButtonClick = { isDeleteDialogOpen = false }
+        onConfirmButtonClick = {
+            onEvent(SessionEvent.DeleteSession)
+            isDeleteDialogOpen = false
+        }
     )
 
-
-    Scaffold (
-        topBar = { SessionScreenTopBar(onBackButtonClick = onBackButtonClick)}
-    ) {paddingValues ->
+    Scaffold(
+        topBar = { SessionScreenTopBar(onBackButtonClick = onBackButtonClick) }
+    ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -105,7 +112,9 @@ private fun SessionScreen(
                 TimerSection(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(1f)
+                        .aspectRatio(1f),
+                    durationSeconds = state.sessionDurationSeconds,
+                    timerState = state.timerState
                 )
             }
 
@@ -114,7 +123,7 @@ private fun SessionScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp),
-                    relatedToSubject = "English",
+                    relatedToSubject = state.relatedToSubject.ifBlank { "Select Subject" },
                     selectSubjectButtonClick = { isBottomSheetOpen = true }
                 )
             }
@@ -124,19 +133,21 @@ private fun SessionScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
-                    startButtonClick = {},
-                    cancelButtonClick = {},
-                    finishButtonClick = {}
+                    timerState = state.timerState,
+                    startButtonClick = { onEvent(SessionEvent.StartSession) },
+                    cancelButtonClick = { onEvent(SessionEvent.CancelSession) },
+                    finishButtonClick = { onEvent(SessionEvent.FinishSession) }
                 )
             }
 
             StudySessionsList(
                 sectionTitle = "STUDY SESSIONS HISTORY",
-                emptyListText = "You don't have any recent sessions. " +
-                        "\n Start a study session to begin recording your progress",
-                sessions = sessions,
-                onDeleteIconClick = { isDeleteDialogOpen = true }
-
+                emptyListText = "You don't have any recent sessions.\nStart a study session to begin recording your progress.",
+                sessions = state.sessions,
+                onDeleteIconClick = { session ->
+                    onEvent(SessionEvent.OnDeleteSessionButtonClick(session))
+                    isDeleteDialogOpen = true
+                }
             )
         }
     }
@@ -144,21 +155,21 @@ private fun SessionScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-
 private fun SessionScreenTopBar(
     onBackButtonClick: () -> Unit
 ) {
     TopAppBar(
         navigationIcon = {
-            IconButton( onClick = { }) {
+            IconButton(onClick = onBackButtonClick) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Navigate back to the back screen"
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Navigate back"
                 )
             }
         },
         title = {
-            Text(text = "Study sessions",
+            Text(
+                text = "Study Sessions",
                 style = MaterialTheme.typography.headlineSmall
             )
         }
@@ -166,22 +177,35 @@ private fun SessionScreenTopBar(
 }
 
 @Composable
-
 private fun TimerSection(
-    modifier: Modifier
-){
+    modifier: Modifier,
+    durationSeconds: Long,
+    timerState: TimerState
+) {
+    val hours = durationSeconds / 3600
+    val minutes = (durationSeconds % 3600) / 60
+    val seconds = durationSeconds % 60
+    val timeString = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
-    ){
+    ) {
         Box(
             modifier = Modifier
                 .size(250.dp)
-                .border(5.dp, MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                .border(
+                    width = 5.dp,
+                    color = if (timerState == TimerState.STARTED)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant,
+                    shape = CircleShape
+                )
         )
 
         Text(
-            text = "00:05:32",
+            text = timeString,
             style = MaterialTheme.typography.titleLarge.copy(fontSize = 45.sp)
         )
     }
@@ -192,12 +216,8 @@ private fun RelatedToSubjectSection(
     modifier: Modifier,
     relatedToSubject: String,
     selectSubjectButtonClick: () -> Unit
-){
-
-    Column(
-        modifier = Modifier
-            .padding(10.dp)
-    ) {
+) {
+    Column(modifier = Modifier.padding(10.dp)) {
         Text(
             text = "Related to subject",
             style = MaterialTheme.typography.bodySmall
@@ -213,9 +233,7 @@ private fun RelatedToSubjectSection(
                 style = MaterialTheme.typography.bodyLarge
             )
 
-            IconButton(
-                onClick = selectSubjectButtonClick)
-            {
+            IconButton(onClick = selectSubjectButtonClick) {
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
                     contentDescription = "Select Subject"
@@ -228,16 +246,18 @@ private fun RelatedToSubjectSection(
 @Composable
 private fun ButtonSection(
     modifier: Modifier,
+    timerState: TimerState,
     startButtonClick: () -> Unit,
     cancelButtonClick: () -> Unit,
     finishButtonClick: () -> Unit
-){
+) {
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         Button(
-            onClick = { cancelButtonClick() }
+            onClick = cancelButtonClick,
+            enabled = timerState != TimerState.IDLE
         ) {
             Text(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
@@ -245,21 +265,25 @@ private fun ButtonSection(
             )
         }
         Button(
-            onClick = { startButtonClick() }
+            onClick = startButtonClick,
+            enabled = timerState == TimerState.IDLE,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
         ) {
             Text(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                text = "Start"
+                text = if (timerState == TimerState.STARTED) "Running..." else "Start"
             )
         }
         Button(
-            onClick = { finishButtonClick() }
+            onClick = finishButtonClick,
+            enabled = timerState == TimerState.STARTED
         ) {
             Text(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                 text = "Finish"
             )
-
         }
     }
 }

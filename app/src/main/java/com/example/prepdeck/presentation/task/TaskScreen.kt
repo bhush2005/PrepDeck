@@ -16,7 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
@@ -44,12 +44,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.prepdeck.presentation.components.DeleteDialogue
 import com.example.prepdeck.presentation.components.SubjectListBottomSheet
 import com.example.prepdeck.presentation.components.TaskCheckBox
 import com.example.prepdeck.presentation.components.TaskDatePicker
-import com.example.prepdeck.subjects
-import com.example.prepdeck.ui.theme.Red
 import com.example.prepdeck.util.Priority
 import com.example.prepdeck.util.changeMillisToDateString
 import com.ramcosta.composedestinations.annotation.Destination
@@ -70,8 +69,12 @@ data class TaskScreenNavArgs(
 fun TaskScreenRoute(
     navigator: DestinationsNavigator
 ) {
-    val viewModel : TaskViewModel = hiltViewModel()
+    val viewModel: TaskViewModel = hiltViewModel()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
     TaskScreen(
+        state = state,
+        onEvent = viewModel::onEvent,
         onBackButtonClick = { navigator.navigateUp() }
     )
 }
@@ -80,15 +83,16 @@ fun TaskScreenRoute(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TaskScreen(
+    state: TaskState,
+    onEvent: (TaskEvent) -> Unit,
     onBackButtonClick: () -> Unit
 ) {
 
     var isDeleteDialogOpen by rememberSaveable { mutableStateOf(false) }
-
     var isDatePickerDialogOpen by rememberSaveable { mutableStateOf(false) }
 
     val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = Instant.now().toEpochMilli(),
+        initialSelectedDateMillis = state.dueDate ?: Instant.now().toEpochMilli(),
         selectableDates = object : SelectableDates {
             override fun isSelectableDate(utcTimeMillis: Long): Boolean {
                 val selectDate = Instant
@@ -105,25 +109,23 @@ private fun TaskScreen(
     val sheetState = rememberModalBottomSheetState()
     var isBottomSheetOpen by rememberSaveable { mutableStateOf(false) }
 
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-
-    var taskTittleError by rememberSaveable{ mutableStateOf<String?>("") }
-
-    taskTittleError = when {
-        title.isBlank() -> "Please enter task title."
-        title.length < 4 -> "Task title is too short."
-        title.length > 30 -> "Task title is too long."
+    val taskTitleError: String? = when {
+        state.title.isBlank() -> "Please enter task title."
+        state.title.length < 4 -> "Task title is too short."
+        state.title.length > 30 -> "Task title is too long."
         else -> null
     }
 
     DeleteDialogue(
-        isOpen =isDeleteDialogOpen,
+        isOpen = isDeleteDialogOpen,
         title = "Delete Task?",
-        bodyText = "Are you sure, you want to delete this task? " +
-                "This action can not be undone",
+        bodyText = "Are you sure, you want to delete this task? This action can not be undone",
         onDismissRequest = { isDeleteDialogOpen = false },
-        onConfirmButtonClick = { isDeleteDialogOpen = false }
+        onConfirmButtonClick = {
+            onEvent(TaskEvent.DeleteTask)
+            isDeleteDialogOpen = false
+            onBackButtonClick()
+        }
     )
 
     TaskDatePicker(
@@ -132,6 +134,7 @@ private fun TaskScreen(
         onDismissRequest = { isDatePickerDialogOpen = false },
         onConfirmButton = {},
         onConfirmButtonClicked = {
+            onEvent(TaskEvent.OnDateChange(datePickerState.selectedDateMillis))
             isDatePickerDialogOpen = false
         }
     )
@@ -139,31 +142,31 @@ private fun TaskScreen(
     SubjectListBottomSheet(
         sheetState = sheetState,
         isOpen = isBottomSheetOpen,
-        subjects = subjects,
+        subjects = state.subjectList,
         bottomSheetTitle = "Related to subject",
         onDismissRequest = { isBottomSheetOpen = false },
-        onSubjectClicked = {
-            scope.launch { sheetState.hide()}. invokeOnCompletion {
+        onSubjectClicked = { subject ->
+            onEvent(TaskEvent.OnRelatedSubjectSelect(subject))
+            scope.launch { sheetState.hide() }.invokeOnCompletion {
                 if (!sheetState.isVisible) isBottomSheetOpen = false
-        }}
+            }
+        }
     )
 
-
-    Scaffold (
+    Scaffold(
         topBar = {
             TaskScreenTopBar(
-                isTaskExist = true,
-                isComplete = false,
-                checkBoxBorderColor = Red,
+                isTaskExist = state.currentTask != null,
+                isComplete = state.isTaskComplete,
+                checkBoxBorderColor = if (state.isTaskComplete) Color.Green else MaterialTheme.colorScheme.error,
                 onBackButtonClick = onBackButtonClick,
-                onDeleteButtonClick = {isDeleteDialogOpen = true},
-                onCheckBoxClick = {}
+                onDeleteButtonClick = { isDeleteDialogOpen = true },
+                onCheckBoxClick = { onEvent(TaskEvent.OnIsCompleteStatusChange) }
             )
         }
-    ){ paddingValues ->
+    ) { paddingValues ->
 
-
-        Column (
+        Column(
             modifier = Modifier
                 .verticalScroll(state = rememberScrollState())
                 .fillMaxSize()
@@ -172,21 +175,21 @@ private fun TaskScreen(
         ) {
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
-                value = title,
-                onValueChange = { title = it },
-                label = { Text(text = "Title")},
+                value = state.title,
+                onValueChange = { onEvent(TaskEvent.OnTitleChange(it)) },
+                label = { Text(text = "Title") },
                 singleLine = true,
-                isError = taskTittleError != null && title.isNotBlank(),
-                supportingText = { Text(text = taskTittleError.orEmpty()) }
+                isError = taskTitleError != null && state.title.isNotBlank(),
+                supportingText = { Text(text = taskTitleError.orEmpty()) }
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
-                value = description,
-                onValueChange = {description = it},
-                label = { Text(text = "Description")}
+                value = state.description,
+                onValueChange = { onEvent(TaskEvent.OnDescriptionChange(it)) },
+                label = { Text(text = "Description") }
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -202,16 +205,14 @@ private fun TaskScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = datePickerState.selectedDateMillis.changeMillisToDateString(),
+                    text = state.dueDate.changeMillisToDateString(),
                     style = MaterialTheme.typography.bodyLarge
                 )
 
-                IconButton(
-                    onClick = { isDatePickerDialogOpen = true }
-                ){
+                IconButton(onClick = { isDatePickerDialogOpen = true }) {
                     Icon(
                         imageVector = Icons.Default.DateRange,
-                        contentDescription = "select due date"
+                        contentDescription = "Select due date"
                     )
                 }
             }
@@ -225,22 +226,15 @@ private fun TaskScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-
-            ) {
-                Priority.entries.forEach { priotiy->
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Priority.entries.forEach { priority ->
                     PriorityButton(
                         modifier = Modifier.weight(1f),
-                        label = priotiy.title,
-                        backgroundColor = priotiy.color,
-                        borderColor = if (priotiy == Priority.MEDIUM) {
-                            Color.White
-                        } else Color.Transparent,
-                        labelColor = if (priotiy == Priority.MEDIUM) {
-                            Color.White
-                        } else Color.White.copy(alpha = 0.7f),
-                        onClick = {}
+                        label = priority.title,
+                        backgroundColor = priority.color,
+                        borderColor = if (priority == state.priority) Color.White else Color.Transparent,
+                        labelColor = if (priority == state.priority) Color.White else Color.White.copy(alpha = 0.7f),
+                        onClick = { onEvent(TaskEvent.OnPriorityChange(priority)) }
                     )
                 }
             }
@@ -258,13 +252,11 @@ private fun TaskScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "English",
+                    text = state.relatedToSubject.ifBlank { "None selected" },
                     style = MaterialTheme.typography.bodyLarge
                 )
 
-                IconButton(
-                    onClick = { isBottomSheetOpen = true }
-                ){
+                IconButton(onClick = { isBottomSheetOpen = true }) {
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = "Select Subject"
@@ -273,8 +265,11 @@ private fun TaskScreen(
             }
 
             Button(
-                enabled = taskTittleError ==  null,
-                onClick = {},
+                enabled = taskTitleError == null,
+                onClick = {
+                    onEvent(TaskEvent.SaveTask)
+                    onBackButtonClick()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp)
@@ -298,13 +293,15 @@ private fun TaskScreenTopBar(
     TopAppBar(
         navigationIcon = {
             IconButton(onClick = onBackButtonClick) {
-                Icon(imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Navigate back")
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Navigate back"
+                )
             }
         },
         title = { Text(text = "Task") },
         actions = {
-            if (isTaskExist){
+            if (isTaskExist) {
                 TaskCheckBox(
                     isComplete = isComplete,
                     borderColor = checkBoxBorderColor,
@@ -312,8 +309,10 @@ private fun TaskScreenTopBar(
                 )
 
                 IconButton(onClick = onDeleteButtonClick) {
-                    Icon(imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete task")
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete task"
+                    )
                 }
             }
         }
@@ -321,7 +320,6 @@ private fun TaskScreenTopBar(
 }
 
 @Composable
-
 private fun PriorityButton(
     modifier: Modifier = Modifier,
     label: String,
@@ -329,11 +327,11 @@ private fun PriorityButton(
     borderColor: Color,
     labelColor: Color,
     onClick: () -> Unit
-){
+) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .background(backgroundColor)
-            .clickable { (onClick()) }
+            .clickable { onClick() }
             .padding(5.dp)
             .border(1.dp, borderColor, RoundedCornerShape(5.dp))
             .padding(5.dp),

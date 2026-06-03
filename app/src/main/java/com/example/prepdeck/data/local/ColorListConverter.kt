@@ -6,8 +6,9 @@ class ColorListConverter {
 
 
 
+    @TypeConverter
     fun fromColorList(colorsList: List<Int>): String {
-        return colorsList.joinToString(",") {it.toString()}
+        return colorsList.joinToString(",") { it.toString() }
     }
 
 

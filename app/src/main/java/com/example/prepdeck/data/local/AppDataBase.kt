@@ -14,7 +14,8 @@ import com.example.prepdeck.domain.model.Task
         Subject::class,
         Task::class
     ],
-    version = 1
+    version = 1,
+    exportSchema = false
 )
 
 @TypeConverters(ColorListConverter::class)
