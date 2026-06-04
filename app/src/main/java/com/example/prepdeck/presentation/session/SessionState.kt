@@ -6,15 +6,7 @@ import com.example.prepdeck.domain.model.Subject
 data class SessionState(
     val subjects: List<Subject> = emptyList(),
     val sessions: List<Session> = emptyList(),
-    val relatedToSubject: String = "",
-    val subjectId: Int = -1,
-    val sessionDurationSeconds: Long = 0L,
-    val timerState: TimerState = TimerState.IDLE,
+    val relatedToSubject: String? = null,
+    val subjectId: Int? = null,
     val session: Session? = null
 )
-
-enum class TimerState {
-    IDLE,
-    STARTED,
-    STOPPED
-}

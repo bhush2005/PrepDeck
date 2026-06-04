@@ -1,13 +1,17 @@
 package com.example.prepdeck.presentation.session
 
+import androidx.compose.material3.SnackbarDuration
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.prepdeck.domain.model.Session
 import com.example.prepdeck.domain.repository.SessionRepository
 import com.example.prepdeck.domain.repository.SubjectRepository
+import com.example.prepdeck.util.SnackbarEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -17,8 +21,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SessionViewModel @Inject constructor(
-    private val subjectRepository: SubjectRepository,
-    private val sessionRepository: SessionRepository,
+    subjectRepository: SubjectRepository,
+    private val sessionRepository: SessionRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SessionState())
@@ -33,86 +37,105 @@ class SessionViewModel @Inject constructor(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
+        started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000),
         initialValue = SessionState()
     )
 
-    // Timer coroutine job
-    private var timerJob: kotlinx.coroutines.Job? = null
+    private val _snackbarEventFlow = MutableSharedFlow<SnackbarEvent>()
+    val snackbarEventFlow = _snackbarEventFlow.asSharedFlow()
 
     fun onEvent(event: SessionEvent) {
         when (event) {
+            SessionEvent.NotifyToUpdateSubject -> notifyToUpdateSubject()
+            SessionEvent.DeleteSession -> deleteSession()
+            is SessionEvent.OnDeleteSessionButtonClick -> {
+                _state.update {
+                    it.copy(session = event.session)
+                }
+            }
             is SessionEvent.OnRelatedSubjectChange -> {
                 _state.update {
                     it.copy(
                         relatedToSubject = event.subject.name,
-                        subjectId = event.subject.subjectId ?: -1
+                        subjectId = event.subject.subjectId
                     )
                 }
             }
-            SessionEvent.StartSession -> startTimer()
-            SessionEvent.CancelSession -> cancelTimer()
-            SessionEvent.FinishSession -> finishSession()
-            is SessionEvent.OnDeleteSessionButtonClick -> {
-                _state.update { it.copy(session = event.session) }
-            }
-            SessionEvent.DeleteSession -> deleteSession()
-        }
-    }
 
-    private fun startTimer() {
-        _state.update { it.copy(timerState = TimerState.STARTED) }
-        timerJob?.cancel()
-        timerJob = viewModelScope.launch {
-            while (true) {
-                kotlinx.coroutines.delay(1000L)
-                _state.update { it.copy(sessionDurationSeconds = it.sessionDurationSeconds + 1L) }
+            is SessionEvent.SaveSession -> insertSession(event.duration)
+            is SessionEvent.UpdateSubjectIdAndRelatedSubject -> {
+                _state.update {
+                    it.copy(
+                        relatedToSubject = event.relatedToSubject,
+                        subjectId = event.subjectId
+                    )
+                }
             }
         }
     }
 
-    private fun cancelTimer() {
-        timerJob?.cancel()
-        timerJob = null
-        _state.update {
-            it.copy(
-                timerState = TimerState.IDLE,
-                sessionDurationSeconds = 0L
-            )
-        }
-    }
-
-    private fun finishSession() {
-        val duration = _state.value.sessionDurationSeconds
-        if (duration < 36) {
-            // Optionally ignore sessions shorter than 36 seconds
-            cancelTimer()
-            return
-        }
+    private fun notifyToUpdateSubject() {
         viewModelScope.launch {
-            sessionRepository.insertSession(
-                Session(
-                    sessionSubjectId = _state.value.subjectId,
-                    relatedToSubject = _state.value.relatedToSubject,
-                    date = Instant.now().toEpochMilli(),
-                    duration = duration
+            if (state.value.subjectId == null || state.value.relatedToSubject == null) {
+                _snackbarEventFlow.emit(
+                    SnackbarEvent.ShowSnackbar(
+                        message = "Please select subject related to the session."
+                    )
                 )
-            )
-            cancelTimer()
+            }
         }
     }
 
     private fun deleteSession() {
         viewModelScope.launch {
-            _state.value.session?.let { session ->
-                sessionRepository.deleteSession(session)
-                _state.update { it.copy(session = null) }
+            try {
+                state.value.session?.let {
+                    sessionRepository.deleteSession(it)
+                    _snackbarEventFlow.emit(
+                        SnackbarEvent.ShowSnackbar(message = "Session deleted successfully")
+                    )
+                }
+            } catch (e: Exception) {
+                _snackbarEventFlow.emit(
+                    SnackbarEvent.ShowSnackbar(
+                        message = "Couldn't delete session. ${e.message}",
+                        duration = SnackbarDuration.Long
+                    )
+                )
             }
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        timerJob?.cancel()
+    private fun insertSession(duration: Long) {
+        viewModelScope.launch {
+            if (duration < 36) {
+                _snackbarEventFlow.emit(
+                    SnackbarEvent.ShowSnackbar(
+                        message = "Single session can not be less than 36 seconds"
+                    )
+                )
+                return@launch
+            }
+            try {
+                sessionRepository.insertSession(
+                    session = Session(
+                        sessionSubjectId = state.value.subjectId ?: -1,
+                        relatedToSubject = state.value.relatedToSubject ?: "",
+                        date = Instant.now().toEpochMilli(),
+                        duration = duration
+                    )
+                )
+                _snackbarEventFlow.emit(
+                    SnackbarEvent.ShowSnackbar(message = "Session saved successfully")
+                )
+            } catch (e: Exception) {
+                _snackbarEventFlow.emit(
+                    SnackbarEvent.ShowSnackbar(
+                        message = "Couldn't save session. ${e.message}",
+                        duration = SnackbarDuration.Long
+                    )
+                )
+            }
+        }
     }
 }
