@@ -28,6 +28,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.prepdeck.R
 import com.example.prepdeck.domain.model.Session
+import com.example.prepdeck.util.changeMillisToDateString
+import com.example.prepdeck.util.toHours
 
 
 fun LazyListScope.StudySessionsList(
@@ -108,14 +110,14 @@ private fun StudySessionCard(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "${session.date}",
+                        text = session.date.changeMillisToDateString(),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
 
                 Spacer(modifier = modifier.weight(1f))
                 Text(
-                    text = "${session.duration} hr",
+                    text = "${session.duration.toHours()} hr",
                     style = MaterialTheme.typography.bodySmall
                 )
 
